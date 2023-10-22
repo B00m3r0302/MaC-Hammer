@@ -1,6 +1,7 @@
-import ui
-import threading
+from ui import App
 from scanner import Scanner
+from database import Database
+import threading
 import time
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,6 +10,8 @@ from sqlalchemy.pool import QueuePool
 
 # Create an instance of the scanner class
 scanner = Scanner()
+app = App()
+database = Database()
 
 # Create a flag to control the exit
 exit_flag = threading.Event()
@@ -23,6 +26,9 @@ def run_scanner(db_name="MacSafe.db"):
         session = Session()
         try:
             scanner.scan_and_save(directory='/usr/bin')
+            users = scanner.get_macos_user_accounts()
+            scanner.insert_user_accounts_to_db(users)
+            scanner.capture_and_store_connection_data()
             session.commit()
         except Exception as e:
             session.rollback()
@@ -40,12 +46,14 @@ def main():
     print("Welcome to MC-Hammer")
     
     # Automatically run the UI
-    ui.main()
+    app.run()
     
     # Set the exit flag to signal the scanner to exit
     
     exit_flag.set()
     
 if __name__ == "__main__":
+    database.create_tables()
+    scanner.add_trusted_connections()
     main()
     
